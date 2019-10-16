@@ -54,3 +54,49 @@ def check_1_3(me_grad, mse_grad, max_grad, train_sets):
         max_grad(train_set_2d, np.array([-6.28, -4.45])),
         [-0.77818704, -0.62803259]
     ))
+
+def check_closest(fn):
+    inputs = [
+        (6, np.array([5, 3, 4])),
+        (10, np.array([12, 2, 8, 9, 13, 14])),
+        (-2, np.array([-5, 12, 6, 0, -14, 3]))
+    ]
+    assert np.isclose(fn(*inputs[0]), 5), "Jest błąd w funkcji closest!"
+    assert np.isclose(fn(*inputs[1]), 9), "Jest błąd w funkcji closest!"
+    assert np.isclose(fn(*inputs[2]), 0), "Jest błąd w funkcji closest!"
+
+def check_poly(fn):
+    inputs = [
+        (6, np.array([5.5, 3, 4])),
+        (10, np.array([12, 2, 8, 9, 13, 14])),
+        (-5, np.array([6, 3, -12, 9, -15]))
+    ]
+    assert np.isclose(fn(*inputs[0]), 167.5), "Jest błąd w funkcji poly!"
+    assert np.isclose(fn(*inputs[1]), 1539832), "Jest błąd w funkcji poly!"
+    assert np.isclose(fn(*inputs[2]), -10809), "Jest błąd w funkcji poly!"
+    
+def check_multiplication_table(fn):
+    inputs = [3, 5]
+    assert np.all(fn(inputs[0]) == np.array([[1, 2, 3], [2, 4, 6], [3, 6, 9]])), "Jest błąd w funkcji multiplication_table!"
+    assert np.all(fn(inputs[1]) == np.array([
+         [1, 2, 3, 4, 5], [2, 4, 6, 8, 10], [3, 6, 9, 12, 15],
+         [4, 8, 12, 16, 20], [5, 10, 15, 20, 25]
+    ])), "Jest błąd w funkcji multiplication_table!"
+    
+def check_neg_log_likelihood(fn):
+    inputs =     [
+        (np.array([[5], [6.5], [14], [18], [-2], [3], [-5], [-8]]), np.array([5, 8])),
+        (np.array([[-2.5], [0], [-5.5], [4.2], [-2.6], [3.9], [4.2], [9.9]]), np.array([7, -2]))
+    ]
+    assert np.isclose(fn(*inputs[0]), 28.473368724076067), "Jest błąd w funkcji log_likelihood!"
+    assert np.isclose(fn(*inputs[1]), 65.56668571011694), "Jest błąd w funkcji log_likelihood!"
+
+def check_grad_neg_log_likelihood(fn):
+    inputs =     [
+        (np.array([[5], [6.5], [14], [18], [-2], [3], [-5], [-8]]), np.array([5, 8])),
+        (np.array([[-2.5], [0], [-5.5], [4.2], [-2.6], [3.9], [4.2], [9.9]]), np.array([7, -2]))
+    ]
+    desired_array = np.array([0.1328125, -0.12158203])
+    assert all(np.isclose(np.ravel(fn(*inputs[0])), desired_array)), "Jest błąd w funkcji grad_log_likelihood!"
+    desired_array = np.array([11.1, 48.67])
+    assert all(np.isclose(np.ravel(fn(*inputs[1])), desired_array)), "Jest błąd w funkcji grad_log_likelihood!"
