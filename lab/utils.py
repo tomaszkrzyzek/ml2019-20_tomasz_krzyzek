@@ -83,7 +83,8 @@ def contour_2d_set(dataset, ax, loss_fn, linspaces=None):
     if linspaces is None:
         ax.scatter(dataset[:, 0], dataset[:, 1])
     else:
-        ax.contourf(first_linspace, second_linspace, Z, levels=300, cmap=cm.PuBu_r)
+        pass
+        # ax.contourf(first_linspace, second_linspace, Z, levels=300, cmap=cm.PuBu_r)
     #    plt.colorbar()
         
 
