@@ -4,9 +4,14 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import ticker, cm
 
+import matplotlib.animation as animation
+from sklearn.datasets import make_moons, make_circles, make_blobs
+from sklearn.preprocessing import StandardScaler
+
 
 def get_fn_values(points, fn, X_vals):
     return np.array([fn(points, v) for v in X_vals])
+
 
 def plot_1d_set(dataset, ax, loss_fns, show_title=False):
     linspace = np.linspace(dataset.min(), dataset.max(), num=200)
@@ -19,6 +24,7 @@ def plot_1d_set(dataset, ax, loss_fns, show_title=False):
             ax.set_title(loss_fn.__name__)
         ax.plot(linspace, y_vals, label=loss_fn.__name__)
 
+        
 def plot_2d_set(dataset, ax, loss_fn):
     dataset_mins = dataset.min(0)
     dataset_maxs = dataset.max(0)
@@ -34,6 +40,7 @@ def plot_2d_set(dataset, ax, loss_fn):
 
     ax.scatter(dataset[:, 0], dataset[:, 1], np.zeros((dataset.shape[0],)))
 
+    
 def contour_2d_set(dataset, ax, loss_fn, linspaces=None):
     dataset_mins = dataset.min(0)
     dataset_maxs = dataset.max(0)
@@ -56,7 +63,6 @@ def contour_2d_set(dataset, ax, loss_fn, linspaces=None):
         ax.contourf(first_linspace, second_linspace, Z, levels=300, cmap=cm.PuBu_r)
     #    plt.colorbar()
         
-
 
 def plot_2d_loss_fn(loss_fn, title, dataset):
     fig = plt.figure(figsize=(10, 4))
@@ -100,6 +106,7 @@ def plot_gradient_steps_1d(ax, dataset, gradient_descent_fn, grad_fn, loss_fn, n
     ax.scatter(all_v, y_vals, c=np.arange(len(all_v)), cmap=plt.cm.viridis)
     return final_v
 
+
 def plot_gradient_steps_2d(ax, dataset, gradient_descent_fn, grad_fn, loss_fn, num_steps=100, learning_rate=1e-2, linspaces=None):
     final_v, final_grad, all_v = gradient_descent_fn(
         grad_fn, dataset, num_steps=num_steps, learning_rate=learning_rate)
@@ -108,6 +115,7 @@ def plot_gradient_steps_2d(ax, dataset, gradient_descent_fn, grad_fn, loss_fn, n
 
     print("Final grad value for {}: {}".format(loss_fn.__name__, final_grad))
     return final_v
+
 
 def visualize_normal_dist(X, loc, scale):
     peak = 1 / np.sqrt(2 * np.pi * (scale ** 2))
@@ -122,6 +130,7 @@ def visualize_normal_dist(X, loc, scale):
     plt.plot([loc + 3 * scale, loc + 3 * scale], [0, peak], color="g")
     plt.legend()
 
+    
 def scatter_with_whiten(X, whiten, name, standarize=False):
     plt.title(name)
     plt.scatter(X[:, 0], X[:, 1], label="Before whitening")
@@ -137,6 +146,7 @@ def scatter_with_whiten(X, whiten, name, standarize=False):
     plt.legend()
     plt.show()
 
+    
 def generate_and_fit(mu, sigma, samples_num, grad_fn):
     dataset = np.random.normal(mu, sigma, size=(samples_num, 1))
     (final_mu, final_sigma), _, _ = gradient_descent(
@@ -157,3 +167,82 @@ def generate_and_fit(mu, sigma, samples_num, grad_fn):
     plt.plot(X, true_Y, label="True distribution")
     plt.legend()
     plt.show()
+
+
+def plot_clustering(X, y, k=3):
+    
+    assert X.shape[0] == y.shape[0]
+
+    f = plt.figure(figsize=(8, 8))
+    ax = f.add_subplot(111)
+    ax.axis('equal')
+    
+    for i in range(k):
+        ax.scatter(X[y == i, 0], X[y == i, 1])
+        
+        
+def animate_clustering(X, ys):
+
+    def update_colors(i, ys, scat):
+        scat.set_array(ys[i]) 
+        return scat,
+
+    n_frames = len(ys)
+
+    colors = ys[0]
+
+    fig = plt.figure(figsize=(8, 8))
+    scat = plt.scatter(X[:, 0], X[:, 1], c=colors)
+
+    ani = animation.FuncAnimation(fig, update_colors, frames=range(n_frames),
+                                  fargs=(ys, scat))
+    return ani
+
+
+def plot_cluster_comparison(datasets, results):
+    
+    assert len(results) == len(datasets),  "`results` list length does not match the dataset length!"
+
+    n_rows = len(results)
+    n_cols = len(results[0])
+
+    fig, axes = plt.subplots(nrows=n_rows, ncols=n_cols, figsize=(4 * n_rows, 4 * n_cols))
+
+    for ax, col in zip(axes[0], ['K-Means', 'DBSCAN', 'Agglomerative', 'GMM']):
+        ax.set_title(col, size=24)
+
+    for row, X, y_row in zip(axes, datasets, results):
+        for ax, y in zip(row, y_row):
+
+            ax.scatter(X[:,0], X[:,1], c=y.astype(np.int64))
+            
+
+def get_clustering_data():
+    
+    def standarize(X):
+        return StandardScaler().fit_transform(X)
+
+    n_samples = 1500
+    noisy_circles = make_circles(n_samples=n_samples, factor=.5, noise=.05)
+
+    noisy_moons = make_moons(n_samples=n_samples, noise=.05)
+    # Anisotropicly distributed data
+    random_state = 170
+    X, y = make_blobs(n_samples=n_samples, random_state=random_state)
+    transformation = [[0.6, -0.6], [-0.4, 0.8]]
+    X_aniso = np.dot(X, transformation)
+    aniso = (X_aniso, y)
+
+    # blobs with varied variances
+    varied = make_blobs(n_samples=n_samples,
+                                 cluster_std=[1.0, 2.5, 0.5],
+                                 random_state=random_state)
+
+    datasets = [noisy_circles[0],
+          noisy_moons[0],
+          X_aniso,
+          varied[0]]
+
+    datasets = [standarize(X) for X in datasets]
+
+    return datasets
