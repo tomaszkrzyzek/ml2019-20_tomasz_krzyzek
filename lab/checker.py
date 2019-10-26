@@ -70,11 +70,11 @@ class _Checker(object):
             assert isinstance(returned, np.ndarray), f"Wrong type retuned: " \
                                                      f"{type(returned)}, expected: np.ndarray"
             assert returned.shape == expected.shape, "Wrong shape returned!"
-            assert np.allclose(expected, returned), "Wrong value returned!"
+            assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong value returned!"
         elif isinstance(expected, list):
             expected = np.array(expected)
             assert returned.shape == expected.shape, "Wrong shape returned!"
-            assert np.allclose(expected, returned), "Wrong value returned!"
+            assert np.allclose(expected, returnedm rtol=1e-03, atol=1e-06), "Wrong value returned!"
         else:
             assert returned == expected, "Wrong value retuned!"
 
