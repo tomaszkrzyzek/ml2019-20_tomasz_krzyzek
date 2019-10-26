@@ -74,7 +74,7 @@ class _Checker(object):
         elif isinstance(expected, list):
             expected = np.array(expected)
             assert returned.shape == expected.shape, "Wrong shape returned!"
-            assert np.allclose(expected, returnedm rtol=1e-03, atol=1e-06), "Wrong value returned!"
+            assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong value returned!"
         else:
             assert returned == expected, "Wrong value retuned!"
 
