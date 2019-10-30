@@ -4,9 +4,17 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import ticker, cm
 
+from collections import namedtuple
 import matplotlib.animation as animation
 from sklearn.datasets import make_moons, make_circles, make_blobs
 from sklearn.preprocessing import StandardScaler
+
+
+Dataset = namedtuple(
+    "Dataset",
+    ["data", "target", "target_names", "filename"],
+    defaults=(None, None, None, None)
+)
 
 
 def get_fn_values(points, fn, X_vals):
@@ -24,7 +32,7 @@ def plot_1d_set(dataset, ax, loss_fns, show_title=False):
             ax.set_title(loss_fn.__name__)
         ax.plot(linspace, y_vals, label=loss_fn.__name__)
 
-        
+
 def plot_2d_set(dataset, ax, loss_fn):
     dataset_mins = dataset.min(0)
     dataset_maxs = dataset.max(0)
@@ -40,7 +48,7 @@ def plot_2d_set(dataset, ax, loss_fn):
 
     ax.scatter(dataset[:, 0], dataset[:, 1], np.zeros((dataset.shape[0],)))
 
-    
+
 def contour_2d_set(dataset, ax, loss_fn, linspaces=None):
     dataset_mins = dataset.min(0)
     dataset_maxs = dataset.max(0)
@@ -55,14 +63,14 @@ def contour_2d_set(dataset, ax, loss_fn, linspaces=None):
     for row_idx, first_coord in enumerate(first_linspace):
         for col_idx, second_coord in enumerate(second_linspace):
             Z[col_idx][row_idx] = loss_fn(dataset, np.array([first_coord, second_coord]))
-    
+
     ax.contour(X, Y, Z, levels=20)
     if linspaces is None:
         ax.scatter(dataset[:, 0], dataset[:, 1])
     else:
         ax.contourf(first_linspace, second_linspace, Z, levels=300, cmap=cm.PuBu_r)
     #    plt.colorbar()
-        
+
 
 def plot_2d_loss_fn(loss_fn, title, dataset):
     fig = plt.figure(figsize=(10, 4))
@@ -130,23 +138,23 @@ def visualize_normal_dist(X, loc, scale):
     plt.plot([loc + 3 * scale, loc + 3 * scale], [0, peak], color="g")
     plt.legend()
 
-    
+
 def scatter_with_whiten(X, whiten, name, standarize=False):
     plt.title(name)
     plt.scatter(X[:, 0], X[:, 1], label="Before whitening")
     white_X = whiten(X)
     plt.axis("equal")
     plt.scatter(white_X[:, 0], white_X[:, 1], label="After whitening")
-    
-    
+
+
     if standarize:
         X_standarized = (X - X.mean(axis=0)) / X.std(axis=0)
         plt.scatter(X_standarized[:, 0], X_standarized[:, 1], label="Standarized")
-        
+
     plt.legend()
     plt.show()
 
-    
+
 def generate_and_fit(mu, sigma, samples_num, grad_fn):
     dataset = np.random.normal(mu, sigma, size=(samples_num, 1))
     (final_mu, final_sigma), _, _ = gradient_descent(
@@ -170,21 +178,21 @@ def generate_and_fit(mu, sigma, samples_num, grad_fn):
 
 
 def plot_clustering(X, y, k=3):
-    
+
     assert X.shape[0] == y.shape[0]
 
     f = plt.figure(figsize=(8, 8))
     ax = f.add_subplot(111)
     ax.axis('equal')
-    
+
     for i in range(k):
         ax.scatter(X[y == i, 0], X[y == i, 1])
-        
-        
+
+
 def animate_clustering(X, ys):
 
     def update_colors(i, ys, scat):
-        scat.set_array(ys[i]) 
+        scat.set_array(ys[i])
         return scat,
 
     n_frames = len(ys)
@@ -200,7 +208,7 @@ def animate_clustering(X, ys):
 
 
 def plot_cluster_comparison(datasets, results):
-    
+
     assert len(results) == len(datasets),  "`results` list length does not match the dataset length!"
 
     n_rows = len(results)
@@ -215,10 +223,10 @@ def plot_cluster_comparison(datasets, results):
         for ax, y in zip(row, y_row):
 
             ax.scatter(X[:,0], X[:,1], c=y.astype(np.int64))
-            
+
 
 def get_clustering_data():
-    
+
     def standarize(X):
         return StandardScaler().fit_transform(X)
 
@@ -246,3 +254,76 @@ def get_clustering_data():
     datasets = [standarize(X) for X in datasets]
 
     return datasets
+
+
+def get_toy_dataset():
+    first_example_cov = np.array([[1, 0.99], [0.99, 1]])
+    second_example_cov = np.array([[1, -0.99], [-0.99, 1]])
+    X1 = np.random.multivariate_normal([0, 0], first_example_cov, size=1000)
+    X2 = np.random.multivariate_normal([8, 8], second_example_cov, size=1000)
+    X = np.concatenate([X1, X2])
+    Y = np.concatenate([np.zeros(len(X1)), np.ones(len(X2))])
+
+    toy_dataset = Dataset(X, Y, Y, "Toy dataset")
+    return toy_dataset
+
+
+def test_pca(name, pca_cls, dataset, n_components=None, var_to_explain=None):
+    X = dataset.data
+    y = dataset.target
+    y_names = dataset.target_names
+
+    pca = pca_cls(n_components=n_components, var_to_explain=var_to_explain)
+    pca.fit(X)
+    B = pca.transform(X)
+    print(f"Dataset {name}, Data dimension after the projection: {B.shape[1]}")
+
+    if B.shape[1] == 1:
+        B = np.concatenate([B, np.zeros_like(B)], 1)
+
+    scatter = plt.scatter(B[:, 0], B[:, 1], c=y)
+    scatter_objects, _ = scatter.legend_elements()
+    plt.title(name)
+    plt.legend(scatter_objects, y_names, loc="lower left", title="Classes")
+    plt.show()
+
+def create_regression_dataset(func, sample_size=10):
+    dataset_X = np.random.uniform(-2.5, 2.5, size=sample_size).reshape(-1, 1)
+    dataset_Y_clean = func(dataset_X)
+    dataset_Y = dataset_Y_clean + np.random.normal(0, 0.2, size=dataset_Y_clean.shape)
+    dataset_Y = dataset_Y.squeeze()
+    return Dataset(dataset_X, dataset_Y)
+
+def plot_regression_dataset(dataset, name):
+    plt.plot([dataset.data.min(), dataset.data.max()], [0, 0], "k--")
+    plt.plot([0, 0], [dataset.target.min(), dataset.target.max()], "k--")
+    plt.title(name)
+    plt.scatter(dataset.data, dataset.target)
+    plt.show()
+
+def plot_regression_results(dataset, regression_cls, name, embed_func=None, regression_kwargs=None, **embed_kwargs):
+    if embed_func is None:
+        embed_func = lambda x: x
+    if regression_kwargs is None:
+        regression_kwargs = dict()
+
+    X = embed_func(dataset.data, **embed_kwargs)
+    regression = regression_cls(**regression_kwargs)
+    regression.fit(X, dataset.target)
+
+    loss_val = regression.loss(X, dataset.target)
+    linspace_X = np.linspace(-2.5, 2.5)
+    embedded_linspace = embed_func(linspace_X.reshape(-1, 1), **embed_kwargs)
+    predicted_Y = regression.predict(embedded_linspace)
+
+    plt.title(name)
+    plt.plot(linspace_X, np.zeros_like(linspace_X), "k--")
+    print(f"Dataset {name}\nWartość funkcji kosztu: {regression.loss(X, dataset.target)}")
+
+    plot_min = min(predicted_Y.min(), dataset.target.min())
+    plot_max = max(predicted_Y.max(), dataset.target.max())
+    plt.plot([0, 0], [plot_min, plot_max], "k--")
+    plt.plot(linspace_X, predicted_Y, c="C0", label="Regression results", linewidth=3)
+    plt.scatter(dataset.data, dataset.target, c="C1", label="Samples")
+    plt.legend()
+    plt.show()

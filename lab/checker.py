@@ -70,11 +70,11 @@ class _Checker(object):
             assert isinstance(returned, np.ndarray), f"Wrong type retuned: " \
                                                      f"{type(returned)}, expected: np.ndarray"
             assert returned.shape == expected.shape, "Wrong shape returned!"
-            assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong value returned!"
+            assert np.allclose(expected, returned), "Wrong value returned!"
         elif isinstance(expected, list):
             expected = np.array(expected)
             assert returned.shape == expected.shape, "Wrong shape returned!"
-            assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong value returned!"
+            assert np.allclose(expected, returned), "Wrong value returned!"
         else:
             assert returned == expected, "Wrong value retuned!"
 
@@ -243,3 +243,85 @@ def check_grad_neg_log_likelihood(fn):
     assert all(np.isclose(np.ravel(fn(*inputs[0])), desired_array)), "Jest błąd w funkcji grad_log_likelihood!"
     desired_array = np.array([11.1, 48.67])
     assert all(np.isclose(np.ravel(fn(*inputs[1])), desired_array)), "Jest błąd w funkcji grad_log_likelihood!"
+
+def check_02_pca(pca_cls):
+    from sklearn import datasets
+    os.makedirs(".checker/02/", exist_ok=True)
+
+    np.random.seed(55)
+    input_data = np.random.normal(5, 22, size=(1000, 4))
+    pca = pca_cls(n_components=3)
+    pca.fit(input_data)
+    returned = pca.transform(input_data)
+    expected = np.load(".checker/05/pca_random.out.npz")["data"]
+    assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong value returned!"
+
+    # np.savez_compressed(file=".checker/05/pca_random.out", data=outputs)
+
+    input_data = datasets.load_iris().data
+    pca = pca_cls(var_to_explain=0.97)
+    pca.fit(input_data)
+    returned = pca.transform(input_data)
+    expected = np.load(".checker/05/pca_iris.out.npz")["data"]
+    assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong value returned!"
+
+    input_data = datasets.load_digits().data
+    pca = pca_cls(var_to_explain=0.90)
+    pca.fit(input_data)
+    returned = pca.transform(input_data)
+    expected = np.load(".checker/05/pca_digits.out.npz")["data"]
+    assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong value returned!"
+
+def check_02_linear_regression(lr_cls):
+    from sklearn import datasets
+    os.makedirs(".checker/02/", exist_ok=True)
+
+    input_dataset = datasets.load_boston()
+    lr = lr_cls()
+    lr.fit(input_dataset.data, input_dataset.target)
+    returned = lr.predict(input_dataset.data)
+    # np.savez_compressed(".checker/05/lr_boston.out.npz", data=returned)
+    expected = np.load(".checker/05/lr_boston.out.npz")["data"]
+    assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong prediction returned!"
+
+    loss = lr.loss(input_dataset.data, input_dataset.target)
+    assert np.isclose(loss, 24.166099, rtol=1e-03, atol=1e-06), "Wrong value of the loss function!"
+
+    input_dataset = datasets.load_diabetes()
+    lr = lr_cls()
+    lr.fit(input_dataset.data, input_dataset.target)
+    returned = lr.predict(input_dataset.data)
+    # np.savez_compressed(".checker/05/lr_diabetes.out.npz", data=returned)
+    expected = np.load(".checker/05/lr_iris.out.npz")["data"]
+    assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong prediction returned!"
+
+    loss = lr.loss(input_dataset.data, input_dataset.target)
+    assert np.isclose(loss, 26004.287402, rtol=1e-03, atol=1e-06), "Wrong value of the loss function!"
+
+def check_02_regularized_linear_regression(lr_cls):
+    from sklearn import datasets
+    os.makedirs(".checker/02/", exist_ok=True)
+
+    np.random.seed(54)
+    input_dataset = datasets.load_boston()
+    lr = lr_cls()
+    lr.fit(input_dataset.data, input_dataset.target)
+    returned = lr.predict(input_dataset.data)
+    # np.savez_compressed(".checker/05/rlr_boston.out.npz", data=returned)
+    expected = np.load(".checker/05/rlr_boston.out.npz")["data"]
+    assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong prediction returned!"
+
+    loss = lr.loss(input_dataset.data, input_dataset.target)
+    assert np.isclose(loss, 42.8331406942, rtol=1e-03, atol=1e-06), "Wrong value of the loss function!"
+
+    np.random.seed(58)
+    input_dataset = datasets.load_diabetes()
+    lr = lr_cls(lr=1e-2, alpha=1e-4)
+    lr.fit(input_dataset.data, input_dataset.target)
+    returned = lr.predict(input_dataset.data)
+    # np.savez_compressed(".checker/05/rlr_diabetes.out.npz", data=returned)
+    expected = np.load(".checker/05/rlr_diabetes.out.npz")["data"]
+    assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong prediction returned!"
+
+    loss = lr.loss(input_dataset.data, input_dataset.target)
+    assert np.isclose(loss, 26111.08336411, rtol=1e-03, atol=1e-06), "Wrong value of the loss function!"
