@@ -1,5 +1,6 @@
 import numpy as np
 import utils
+import sys
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import ticker, cm
@@ -10,11 +11,20 @@ from sklearn.datasets import make_moons, make_circles, make_blobs
 from sklearn.preprocessing import StandardScaler
 
 
-Dataset = namedtuple(
-    "Dataset",
-    ["data", "target", "target_names", "filename"],
-    defaults=(None, None, None, None)
-)
+if sys.version_info[0] < 3:
+    raise Exception("Must be using Python 3")
+elif sys.version_info[1] < 7:
+    Dataset = namedtuple(
+        "Dataset",
+        ["data", "target", "target_names", "filename"],
+    )
+    Dataset.__new__.__defaults__ = (None,) * len(Dataset._fields)
+else:
+    Dataset = namedtuple(
+        "Dataset",
+        ["data", "target", "target_names", "filename"],
+        defaults=(None, None, None, None)
+    )
 
 
 def get_fn_values(points, fn, X_vals):
