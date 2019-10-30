@@ -250,25 +250,29 @@ def check_02_pca(pca_cls):
 
     np.random.seed(55)
     input_data = np.random.normal(5, 22, size=(1000, 4))
+    np.random.seed(33)
     pca = pca_cls(n_components=3)
     pca.fit(input_data)
     returned = pca.transform(input_data)
+    # np.savez_compressed(file=".checker/05/pca_random.out", data=returned)
     expected = np.load(".checker/05/pca_random.out.npz")["data"]
     assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong value returned!"
 
-    # np.savez_compressed(file=".checker/05/pca_random.out", data=outputs)
-
     input_data = datasets.load_iris().data
+    np.random.seed(23)
     pca = pca_cls(var_to_explain=0.97)
     pca.fit(input_data)
     returned = pca.transform(input_data)
+    # np.savez_compressed(file=".checker/05/pca_iris.out", data=returned)
     expected = np.load(".checker/05/pca_iris.out.npz")["data"]
     assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong value returned!"
 
     input_data = datasets.load_digits().data
+    np.random.seed(27)
     pca = pca_cls(var_to_explain=0.90)
     pca.fit(input_data)
     returned = pca.transform(input_data)
+    # np.savez_compressed(file=".checker/05/pca_digits.out", data=returned)
     expected = np.load(".checker/05/pca_digits.out.npz")["data"]
     assert np.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong value returned!"
 
