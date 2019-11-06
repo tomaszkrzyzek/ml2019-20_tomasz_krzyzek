@@ -6,6 +6,7 @@ import ipykernel
 import re
 import os
 import numpy as np
+from utils import get_data
 
 
 def checker(function: Callable = None, run_tests: bool = True, path: str = '.checker'):
@@ -329,3 +330,28 @@ def check_02_regularized_linear_regression(lr_cls):
 
     loss = lr.loss(input_dataset.data, input_dataset.target)
     assert np.isclose(loss, 26111.08336411, rtol=1e-03, atol=1e-06), "Wrong value of the loss function!"
+
+
+def test_cv(cv_func):
+    
+    X, y = get_data(split=False)
+    k = 5
+    
+    splits = cv_func(X=X, y=y, k=k)
+    
+    assert len(splits) == k, "Wrong number of splits returned!"
+    
+    for split in splits:
+        assert len(split) == 4, f"Wrong tuple length for a single split, expected 4, got: {len(split)}"
+        assert isinstance(split[0], np.ndarray), "Wrong type returned!"
+        assert isinstance(split[1], np.ndarray), "Wrong type returned!"
+        assert isinstance(split[2], np.ndarray), "Wrong type returned!"
+        assert isinstance(split[3], np.ndarray), "Wrong type returned!"
+        
+        assert len(split[0]) == len(split[1]), f"Train split shape mismatch: {len(split[0])} and {len(split[1])}"
+        assert len(split[2]) == len(split[3]), f"Test split shape mismatch: {len(split[0])} and {len(split[1])}"
+        
+    assert sum([split[2].shape[0] for split in splits]) == X.shape[0], \
+        "Sum of all split lengths is mismatched with whole dataset, did you use whole dataset for splitting?"
+                                                                                                     
+                                                                            
