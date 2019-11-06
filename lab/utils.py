@@ -12,12 +12,20 @@ from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 
 
-Dataset = namedtuple(
-    "Dataset",
-    ["data", "target", "target_names", "filename"],
-    defaults=(None, None, None, None)
-)
-
+if sys.version_info[0] < 3:
+    raise Exception("Must be using Python 3")
+elif sys.version_info[1] < 7:
+    Dataset = namedtuple(
+        "Dataset",
+        ["data", "target", "target_names", "filename"],
+    )
+    Dataset.__new__.__defaults__ = (None,) * len(Dataset._fields)
+else:
+    Dataset = namedtuple(
+        "Dataset",
+        ["data", "target", "target_names", "filename"],
+        defaults=(None, None, None, None)
+    )
 
 def get_fn_values(points, fn, X_vals):
     return np.array([fn(points, v) for v in X_vals])
