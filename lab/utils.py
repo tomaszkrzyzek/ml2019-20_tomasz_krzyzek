@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 import utils
 import matplotlib.pyplot as plt
@@ -11,6 +10,9 @@ from sklearn.datasets import make_moons, make_circles, make_blobs
 from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
+
+import sys
+import torch
 
 
 if sys.version_info[0] < 3:
@@ -27,6 +29,8 @@ else:
         ["data", "target", "target_names", "filename"],
         defaults=(None, None, None, None)
     )
+
+
 
 def get_fn_values(points, fn, X_vals):
     return np.array([fn(points, v) for v in X_vals])
@@ -351,3 +355,31 @@ def get_data(split=True):
         return train_test_split(X, y, test_size=0.25, random_state=42)
     else:
         return X, y
+
+def get_classification_dataset_1d():
+    torch.manual_seed(8)
+    X = torch.cat([
+        torch.randn(10, 1) * 3 + 10,
+        torch.randn(10, 1) * 3 + 1,
+    ])
+
+    y = torch.cat([torch.zeros(10), torch.ones(10)])
+    return Dataset(X, y)
+
+def get_classification_dataset_2d():
+    torch.manual_seed(4)
+    X = torch.cat([
+        torch.randn(50, 2) * 2 + torch.tensor([4., 2.]),
+        torch.randn(50, 2) * 0.5 + torch.tensor([2., -4.]),
+    ])
+
+    y = torch.cat([torch.zeros(50), torch.ones(50)])
+    return Dataset(X, y)
+
+def plot_torch_fn(complex_fn, a, x, result):
+    linspace = torch.linspace(-5, 5, steps=400)
+    vals = complex_fn(a, linspace)
+    plt.plot(linspace.numpy(), vals.detach().numpy())
+    plt.scatter(x.detach().numpy(), complex_fn(a, x).detach().numpy(), label="Starting point")
+    plt.scatter(result, complex_fn(a, result), label="End point")
+    plt.legend()

@@ -6,6 +6,9 @@ import ipykernel
 import re
 import os
 import numpy as np
+import torch
+
+import utils
 from utils import get_data
 
 
@@ -44,6 +47,10 @@ class _Checker(object):
             inputs = dict(np.load(f"{self.load_path}.in.npz"))
             seed = inputs.pop('seed')
             return seed, inputs
+        if os.path.exists(self.load_path + '.in.torch'):
+            inputs = torch.load(f"{self.load_path}.in.torch")
+            seed = inputs.pop('seed')
+            return seed, inputs
         else:
             print("Warning! No saved checker files, "
                   "make sure you pull the `.checker` folder from the repository")
@@ -51,6 +58,12 @@ class _Checker(object):
     def _load_outputs(self):
         if os.path.exists(self.load_path + '.out.npz'):
             outputs_dict = np.load(f"{self.load_path}.out.npz")
+            if len(outputs_dict) == 1:
+                return outputs_dict['0']
+            elif len(outputs_dict) > 1:
+                return tuple(outputs_dict.values())
+        elif os.path.exists(self.load_path + '.out.torch'):
+            outputs_dict = torch.load(f"{self.load_path}.out.torch")
             if len(outputs_dict) == 1:
                 return outputs_dict['0']
             elif len(outputs_dict) > 1:
@@ -76,6 +89,11 @@ class _Checker(object):
             expected = np.array(expected)
             assert returned.shape == expected.shape, "Wrong shape returned!"
             assert np.allclose(expected, returned), "Wrong value returned!"
+        elif isinstance(expected, torch.Tensor):
+            assert isinstance(returned, torch.Tensor), f"Wrong type retuned: " \
+                                                     f"{type(returned)}, expected: torch.Tensor"
+            assert returned.shape == expected.shape, "Wrong shape returned!"
+            assert torch.allclose(expected, returned), "Wrong value returned!"
         else:
             assert returned == expected, "Wrong value retuned!"
 
@@ -98,6 +116,7 @@ class _Checker(object):
             outputs = self._load_outputs()
 
             np.random.seed(seed)
+            torch.manual_seed(seed)
 
             test_results = self.function(**inputs)
             self._check_results(test_results, outputs)
@@ -331,6 +350,59 @@ def check_02_regularized_linear_regression(lr_cls):
     loss = lr.loss(input_dataset.data, input_dataset.target)
     assert np.isclose(loss, 26111.08336411, rtol=1e-03, atol=1e-06), "Wrong value of the loss function!"
 
+def check_07_logistic_reg(lr_cls):
+    np.random.seed(10)
+    torch.manual_seed(10)
+    
+    # **** First dataset ****
+    input_dataset = utils.get_classification_dataset_1d()
+    lr = lr_cls(1)
+    lr.fit(input_dataset.data, input_dataset.target, lr=1e-3, num_steps=int(1e4))
+    returned = lr.predict(input_dataset.data)
+    save_path = ".checker/07/lr_dataset_1d.out.torch"
+    # torch.save(returned, save_path)
+    expected = torch.load(save_path)
+    assert torch.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong prediction returned!"
+
+    loss = lr.loss(input_dataset.data, input_dataset.target)
+    assert np.isclose(loss, 0.5098415017127991, rtol=1e-03, atol=1e-06), "Wrong value of the loss function!"
+    
+    preds_proba = lr.predict_proba(input_dataset.data)
+    save_path = ".checker/07/lr_dataset_1d_proba.out.torch"
+    # torch.save(returned, save_path)
+    expected = torch.load(save_path)
+    assert torch.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong prediction returned!"
+    
+    preds = lr.predict(input_dataset.data)
+    save_path = ".checker/07/lr_dataset_1d_preds.out.torch"
+    # torch.save(returned, save_path)
+    expected = torch.load(save_path)
+    assert torch.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong prediction returned!"
+
+    # **** Second dataset ****
+    input_dataset = utils.get_classification_dataset_2d()
+    lr = lr_cls(2)
+    lr.fit(input_dataset.data, input_dataset.target, lr=1e-2, num_steps=int(1e4))
+    returned = lr.predict(input_dataset.data)
+    save_path = ".checker/07/lr_dataset_2d.out.torch"
+    # torch.save(returned, save_path)
+    expected = torch.load(save_path)
+    assert torch.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong prediction returned!"
+
+    loss = lr.loss(input_dataset.data, input_dataset.target)
+    assert np.isclose(loss, 0.044230662286281586, rtol=1e-03, atol=1e-06), "Wrong value of the loss function!"
+    
+    preds_proba = lr.predict_proba(input_dataset.data)
+    save_path = ".checker/07/lr_dataset_2d_proba.out.torch"
+    # torch.save(returned, save_path)
+    expected = torch.load(save_path)
+    assert torch.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong prediction returned!"
+    
+    preds = lr.predict(input_dataset.data)
+    save_path = ".checker/07/lr_dataset_2d_preds.out.torch"
+    # torch.save(returned, save_path)
+    expected = torch.load(save_path)
+    assert torch.allclose(expected, returned, rtol=1e-03, atol=1e-06), "Wrong prediction returned!"
 
 def test_cv(cv_func):
     
