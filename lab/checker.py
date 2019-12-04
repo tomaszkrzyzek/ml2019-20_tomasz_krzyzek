@@ -434,43 +434,39 @@ from torch.optim import RMSprop as torch_rmsprop
 from torch.optim import Adadelta as torch_adadelta
 from torch.optim import Adam as torch_adam
 
+def optim_f(w):
+    x = torch.tensor([0.2, 2], dtype=torch.float)
+    return torch.sum(x * w ** 2)
 
+def optim_g(w, b):
+    x = torch.tensor([0.2, 2], dtype=torch.float)
+    return torch.sum(x * w + b)
+
+opt_checker_1 = SimpleNamespace(f=optim_f, 
+                                params=[torch.tensor([-6, 2], dtype=torch.float, requires_grad=True)])
+opt_checker_2 = SimpleNamespace(f=optim_g, 
+                               params=[torch.tensor([-6, 2], dtype=torch.float, requires_grad=True),
+                                       torch.tensor([1, -1], dtype=torch.float, requires_grad=True)])
+
+
+test_params = {'Momentum': {'torch_cls': SGD,
+                            'torch_params': {'lr': 0.1, 'momentum': 0.9},
+                            'params': {'learning_rate': 0.1, 'gamma': 0.9}},
+              'Adagrad': {'torch_cls': torch_adagrad,
+                            'torch_params': {'lr': 0.5, 'eps': 1e-8},
+                            'params': {'learning_rate': 0.5, 'epsilon': 1e-8}},
+              'RMSProp': {'torch_cls': torch_rmsprop,
+                          'torch_params': {'lr': 0.5, 'alpha': 0.9, 'eps': 1e-08,},
+                          'params': {'learning_rate': 0.5, 'gamma': 0.9, 'epsilon': 1e-8}},
+              'Adadelta': {'torch_cls': torch_adadelta,
+                          'torch_params': {'rho': 0.9, 'eps': 1e-1},
+                          'params': {'gamma': 0.9, 'epsilon': 1e-1}},
+              'Adam': {'torch_cls': torch_adam,
+                          'torch_params': {'lr': 0.5, 'betas': (0.9, 0.999), 'eps': 1e-08},
+                          'params': {'learning_rate': 0.5, 'beta1': 0.9, 'beta2': 0.999, 'epsilon': 1e-8}}}
 
 def test_optimizer(optim_cls):
-    
-    n_steps = 5
-    
-    def optim_f(w):
-        x = torch.tensor([0.2, 2], dtype=torch.float)
-        return torch.sum(x * w ** 2)
-
-    def optim_g(w, b):
-        x = torch.tensor([0.2, 2], dtype=torch.float)
-        return torch.sum(x * w + b)
-
-    opt_checker_1 = SimpleNamespace(f=optim_f, 
-                                    params=[torch.tensor([-6, 2], dtype=torch.float, requires_grad=True)])
-    opt_checker_2 = SimpleNamespace(f=optim_g, 
-                                   params=[torch.tensor([-6, 2], dtype=torch.float, requires_grad=True),
-                                           torch.tensor([1, -1], dtype=torch.float, requires_grad=True)])
-
-
-    test_params = {'Momentum': {'torch_cls': SGD,
-                                'torch_params': {'lr': 0.1, 'momentum': 0.9},
-                                'params': {'learning_rate': 0.1, 'gamma': 0.9}},
-                  'Adagrad': {'torch_cls': torch_adagrad,
-                                'torch_params': {'lr': 0.5, 'eps': 1e-8},
-                                'params': {'learning_rate': 0.5, 'epsilon': 1e-8}},
-                  'RMSProp': {'torch_cls': torch_rmsprop,
-                              'torch_params': {'lr': 0.5, 'alpha': 0.9, 'eps': 1e-08,},
-                              'params': {'learning_rate': 0.5, 'gamma': 0.9, 'epsilon': 1e-8}},
-                  'Adadelta': {'torch_cls': torch_adadelta,
-                              'torch_params': {'rho': 0.9, 'eps': 1e-1},
-                              'params': {'gamma': 0.9, 'epsilon': 1e-1}},
-                  'Adam': {'torch_cls': torch_adam,
-                              'torch_params': {'lr': 0.5, 'betas': (0.9, 0.999), 'eps': 1e-08},
-                              'params': {'learning_rate': 0.5, 'beta1': 0.9, 'beta2': 0.999, 'epsilon': 1e-8}}}
-    
+               
     test_dict = test_params[ optim_cls.__name__]
     
     for ns in [opt_checker_1, opt_checker_2]:
@@ -478,26 +474,82 @@ def test_optimizer(optim_cls):
         torch_params = [p.clone().detach().requires_grad_(True) for p in ns.params]
         
         torch_opt = test_dict['torch_cls'](torch_params, **test_dict['torch_params'])
+        torch_opt.zero_grad()
         
-        for i in range(n_steps):
-        
-            torch_opt.zero_grad()
-
-            loss = ns.f(*torch_params)
-            loss.backward()
-            torch_opt.step()
+        loss = ns.f(*torch_params)
+        loss.backward()
+        torch_opt.step()
         
         params = [p.clone().detach().requires_grad_(True) for p in ns.params]
         
         opt = optim_cls(params, **test_dict['params'])
-        
-        for i in range(n_steps):
-        
-            opt.zero_grad()
-
-            loss = ns.f(*params)
-            loss.backward()
-            opt.step()
+        opt.zero_grad()
+    
+        loss = ns.f(*params)
+        loss.backward()
+        opt.step()
         
         for p, tp in zip(params, torch_params):
             assert torch.allclose(p, tp)
+
+
+def test_droput(dropout_cls):
+
+    drop = dropout_cls(0.5)
+    drop.train()
+    x = torch.randn(10, 30)
+    out = drop(x)
+
+    for row in out:
+        zeros_in_row = len(torch.where(row == 0.)[0]) 
+        assert zeros_in_row > 0 and zeros_in_row < len(row)
+
+    drop_eval = dropout_cls(0.5)
+    drop_eval.eval()
+    x = torch.randn(10, 30)
+    out_eval = drop_eval(x)
+
+    for row in out_eval:
+        zeros_in_row = len(torch.where(row == 0.)[0]) 
+        assert zeros_in_row == 0
+        
+
+def test_bn(bn_cls):
+
+    torch.manual_seed(42)
+    bn = bn_cls(num_features=100)
+
+    opt = torch.optim.SGD(bn.parameters(), lr=0.1)
+
+    bn.train()
+    x = torch.rand(20, 100)
+    out = bn(x)
+
+    assert out.mean().abs().item() < 1e-4
+    assert abs(out.var().item() - 1) < 1e-1
+
+    assert (bn.sigma != 1).all()
+    assert (bn.mu != 1).all()
+
+    loss = 1 - out.mean()
+    loss.backward()
+    opt.step()
+
+    assert (bn.beta != 0).all()
+    
+    n_steps = 10
+
+    for i in range(n_steps):
+        x = torch.rand(20, 100)
+        out = bn(x)
+        loss = 1 - out.mean()
+        loss.backward()
+        opt.step()
+
+
+    torch.manual_seed(43)
+    test_x = torch.randn(20, 100)
+    bn.eval()
+    test_out = bn(test_x)
+
+    assert abs(test_out.mean() + 0.5) < 1e-1
