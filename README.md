@@ -1,3 +1,5 @@
+Link do colaba z projektem: https://colab.research.google.com/drive/1Ps_V15ryvuI33glHGEJ6LruvqzSNlJHa
+
 # ml2019-20
 Materiały do wykładu Uczenie maszynowe w semestrze zimowym 2019-2020
 
